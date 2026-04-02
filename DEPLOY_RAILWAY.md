@@ -17,6 +17,7 @@ This repo is now set up so Railway can deploy it directly from GitHub with the i
 3. Choose `Deploy from GitHub repo`.
 4. Select `slayerrr12/linkedinScrapper`.
 5. Railway will detect the `Dockerfile` and build the container automatically.
+6. If Railway shows `Suggested Variables`, you can import them from the repo's root `.env.example`.
 
 ## Required Railway Variables
 
@@ -37,6 +38,8 @@ TELEGRAM_OUTPUT_DIR=/data/bot_runs
 ```
 
 Use `TELEGRAM_OUTPUT_DIR=/data/bot_runs` only if you attach a Railway volume in the next step.
+
+If your `Variables` tab is empty, that is normal until you either add them manually or import the suggested variables.
 
 ## Optional Volume
 

@@ -1,7 +1,5 @@
 import argparse
-import tkinter as tk
 from dataclasses import dataclass
-from tkinter import simpledialog
 
 
 DEFAULT_SEARCH_QUERY = "Mtech cse 27 iit Guwahati"
@@ -21,6 +19,13 @@ class ScraperConfig:
 
 
 def prompt_runtime_settings(default_query: str, default_max_profiles: int) -> tuple[str, int]:
+    try:
+        import tkinter as tk
+        from tkinter import simpledialog
+    except ImportError:
+        print("Tkinter is not available in this environment. Falling back to the built-in query and max profile defaults.")
+        return default_query, default_max_profiles
+
     try:
         root = tk.Tk()
     except tk.TclError:
