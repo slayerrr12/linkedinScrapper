@@ -4,3 +4,4 @@ __pycache__/
 *.xlsx
 results.json
 results.pdf
+bot_runs/

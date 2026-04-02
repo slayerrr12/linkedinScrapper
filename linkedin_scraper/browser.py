@@ -1,3 +1,5 @@
+import os
+import platform
 import time
 from typing import Callable, Optional
 
@@ -56,9 +58,19 @@ def wait_for_document(driver: webdriver.Chrome, timeout: int = 15) -> None:
 
 def setup_driver(headless: bool = False) -> webdriver.Chrome:
     options = Options()
+    chrome_bin = os.getenv("CHROME_BIN")
+    if chrome_bin:
+        options.binary_location = chrome_bin
+
     options.add_argument("--start-maximized")
     options.add_argument("--disable-notifications")
     options.add_argument("--window-size=1600,1200")
+
+    if platform.system() == "Linux":
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--disable-gpu")
+
     if headless:
         options.add_argument("--headless=new")
 

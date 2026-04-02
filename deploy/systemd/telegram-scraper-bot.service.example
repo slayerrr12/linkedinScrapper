@@ -1,0 +1,15 @@
+[Unit]
+Description=Telegram LinkedIn Scraper Bot
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/opt/linkedinScrapper
+EnvironmentFile=/opt/linkedinScrapper/deploy/systemd/telegram-scraper-bot.env
+ExecStart=/opt/linkedinScrapper/venv/bin/python /opt/linkedinScrapper/telegram_scraper_bot.py --allowed-chat-ids ${TELEGRAM_ALLOWED_CHAT_IDS} --output-dir /opt/linkedinScrapper/bot_runs --headless
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
