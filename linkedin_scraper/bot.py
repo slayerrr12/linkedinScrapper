@@ -9,7 +9,13 @@ from typing import Optional
 from telegram import Bot, Update
 from telegram.ext import Application, ApplicationBuilder, CommandHandler, ContextTypes
 
-from .config import DEFAULT_CHALLENGE_TIMEOUT, DEFAULT_MAX_PROFILES, ScraperConfig
+from .config import (
+    DEFAULT_MAX_PROFILES,
+    DEFAULT_SERPAPI_COUNTRY,
+    DEFAULT_SERPAPI_GOOGLE_DOMAIN,
+    DEFAULT_SERPAPI_LANGUAGE,
+    ScraperConfig,
+)
 from .runner import run_scrape_job
 from .utils import sanitize_filename_fragment
 
@@ -17,10 +23,12 @@ from .utils import sanitize_filename_fragment
 @dataclass(frozen=True)
 class TelegramBotConfig:
     token: str
+    serpapi_api_key: str
+    google_domain: str
+    language: str
+    country: str
     output_dir: str
     default_max_profiles: int
-    headless: bool
-    challenge_timeout: int
     allowed_chat_ids: set[int]
 
 
@@ -48,20 +56,6 @@ def parse_int_env(name: str, default: int) -> int:
         raise ValueError(f"{name} must be an integer if it is set.") from exc
 
 
-def parse_bool_env(name: str, default: bool) -> bool:
-    raw_value = os.getenv(name)
-    if raw_value is None or not raw_value.strip():
-        return default
-
-    normalized = raw_value.strip().lower()
-    if normalized in {"1", "true", "yes", "on"}:
-        return True
-    if normalized in {"0", "false", "no", "off"}:
-        return False
-
-    raise ValueError(f"{name} must be a boolean string such as true/false if it is set.")
-
-
 def parse_allowed_chat_ids(raw_value: str) -> set[int]:
     if not raw_value.strip():
         return set()
@@ -76,6 +70,26 @@ def parse_bot_config() -> TelegramBotConfig:
         help="Telegram bot token. Can also be provided via TELEGRAM_BOT_TOKEN.",
     )
     parser.add_argument(
+        "--api-key",
+        default=os.getenv("SERPAPI_API_KEY", ""),
+        help="SerpApi API key. Can also be provided via SERPAPI_API_KEY.",
+    )
+    parser.add_argument(
+        "--google-domain",
+        default=os.getenv("SERPAPI_GOOGLE_DOMAIN", DEFAULT_SERPAPI_GOOGLE_DOMAIN),
+        help="Google domain used by SerpApi, for example google.com or google.co.in.",
+    )
+    parser.add_argument(
+        "--hl",
+        default=os.getenv("SERPAPI_HL", DEFAULT_SERPAPI_LANGUAGE),
+        help="Google UI language for SerpApi, for example en.",
+    )
+    parser.add_argument(
+        "--gl",
+        default=os.getenv("SERPAPI_GL", DEFAULT_SERPAPI_COUNTRY),
+        help="Google country code for SerpApi, for example in or us.",
+    )
+    parser.add_argument(
         "--output-dir",
         default=os.getenv("TELEGRAM_OUTPUT_DIR", "bot_runs"),
         help="Directory where bot-triggered exports will be stored.",
@@ -87,18 +101,6 @@ def parse_bot_config() -> TelegramBotConfig:
         help="Default max profile count when /scrape is called without a leading number.",
     )
     parser.add_argument(
-        "--headless",
-        action=argparse.BooleanOptionalAction,
-        default=parse_bool_env("TELEGRAM_HEADLESS", True),
-        help="Run scraping jobs in headless Chrome.",
-    )
-    parser.add_argument(
-        "--challenge-timeout",
-        type=int,
-        default=parse_int_env("TELEGRAM_CHALLENGE_TIMEOUT", DEFAULT_CHALLENGE_TIMEOUT),
-        help="Seconds to wait when a manual verification step appears.",
-    )
-    parser.add_argument(
         "--allowed-chat-ids",
         default=os.getenv("TELEGRAM_ALLOWED_CHAT_IDS", ""),
         help="Comma-separated Telegram chat IDs allowed to use the bot. Leave empty to allow any chat.",
@@ -107,17 +109,19 @@ def parse_bot_config() -> TelegramBotConfig:
 
     if not args.token:
         raise ValueError("Telegram bot token is required. Use --token or TELEGRAM_BOT_TOKEN.")
+    if not args.api_key.strip():
+        raise ValueError("A SerpApi API key is required. Use --api-key or set SERPAPI_API_KEY.")
     if args.default_max_profiles <= 0:
         raise ValueError("--default-max-profiles must be greater than 0.")
-    if args.challenge_timeout <= 0:
-        raise ValueError("--challenge-timeout must be greater than 0.")
 
     return TelegramBotConfig(
         token=args.token,
+        serpapi_api_key=args.api_key.strip(),
+        google_domain=args.google_domain.strip() or DEFAULT_SERPAPI_GOOGLE_DOMAIN,
+        language=args.hl.strip() or DEFAULT_SERPAPI_LANGUAGE,
+        country=args.gl.strip().lower(),
         output_dir=args.output_dir,
         default_max_profiles=args.default_max_profiles,
-        headless=args.headless,
-        challenge_timeout=args.challenge_timeout,
         allowed_chat_ids=parse_allowed_chat_ids(args.allowed_chat_ids),
     )
 
@@ -232,8 +236,10 @@ class TelegramScraperBot:
             query=query,
             max_profiles=max_profiles,
             output_base=str(output_base),
-            headless=self.config.headless,
-            challenge_timeout=self.config.challenge_timeout,
+            serpapi_api_key=self.config.serpapi_api_key,
+            google_domain=self.config.google_domain,
+            language=self.config.language,
+            country=self.config.country,
         )
 
         try:

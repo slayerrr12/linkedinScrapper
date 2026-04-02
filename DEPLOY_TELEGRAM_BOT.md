@@ -5,8 +5,9 @@ This guide shows the easiest path to:
 1. Create a Telegram bot
 2. Get the bot token
 3. Restrict usage to your own Telegram chat
-4. Deploy the bot on a Linux VPS
-5. Keep it running permanently with `systemd`
+4. Add a SerpApi key for search
+5. Deploy the bot on a Linux VPS
+6. Keep it running permanently with `systemd`
 
 ## 1. Create the bot in Telegram
 
@@ -63,7 +64,16 @@ Official reference:
 
 - [Telegram Bot API](https://core.telegram.org/bots/api)
 
-## 4. Create a VPS
+## 4. Add a SerpApi key
+
+This bot now uses [SerpApi](https://serpapi.com/) to get Google search results instead of driving a browser for the search step.
+
+1. Create a SerpApi account.
+2. Copy your API key from the SerpApi dashboard.
+
+You will add that key to the bot environment file below as `SERPAPI_API_KEY`.
+
+## 5. Create a VPS
 
 Any Linux VPS is fine. Ubuntu 22.04 or 24.04 is the easiest path.
 
@@ -73,7 +83,7 @@ Suggested minimum:
 - 2 vCPU
 - Ubuntu LTS
 
-## 5. SSH into the VPS
+## 6. SSH into the VPS
 
 Example:
 
@@ -81,7 +91,7 @@ Example:
 ssh your-user@your-server-ip
 ```
 
-## 6. Install system packages
+## 7. Install system packages
 
 On Ubuntu:
 
@@ -90,7 +100,7 @@ sudo apt update
 sudo apt install -y git python3 python3-venv python3-pip
 ```
 
-## 7. Clone the repository
+## 8. Clone the repository
 
 If the repo is public:
 
@@ -103,7 +113,7 @@ cd /opt/linkedinScrapper
 
 If the repo is private, clone it with a GitHub token or SSH key instead.
 
-## 8. Create the Python environment
+## 9. Create the Python environment
 
 ```bash
 cd /opt/linkedinScrapper
@@ -112,7 +122,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## 9. Create the bot environment file
+## 10. Create the bot environment file
 
 Copy the example file:
 
@@ -130,17 +140,19 @@ Set these values:
 
 - `TELEGRAM_BOT_TOKEN`
 - `TELEGRAM_ALLOWED_CHAT_IDS`
+- `SERPAPI_API_KEY`
 
 Example:
 
 ```bash
 TELEGRAM_BOT_TOKEN=123456789:AA...
 TELEGRAM_ALLOWED_CHAT_IDS=123456789
+SERPAPI_API_KEY=your_serpapi_key
 ```
 
 If you want multiple allowed chats, separate them with commas.
 
-## 10. Test the bot manually
+## 11. Test the bot manually
 
 Run this first before enabling the service:
 
@@ -167,7 +179,7 @@ Then try:
 
 If it works, stop the process with `Ctrl+C`.
 
-## 11. Install the systemd service
+## 12. Install the systemd service
 
 Copy the example service:
 
@@ -190,7 +202,7 @@ Check these values:
 
 Change `User=ubuntu` if your Linux username is different.
 
-## 12. Enable and start the service
+## 13. Enable and start the service
 
 ```bash
 sudo systemctl daemon-reload
@@ -198,14 +210,14 @@ sudo systemctl enable telegram-scraper-bot
 sudo systemctl start telegram-scraper-bot
 ```
 
-## 13. Check logs
+## 14. Check logs
 
 ```bash
 sudo systemctl status telegram-scraper-bot
 sudo journalctl -u telegram-scraper-bot -f
 ```
 
-## 14. How you will use it day to day
+## 15. How you will use it day to day
 
 After deployment, you only need Telegram.
 
@@ -236,7 +248,7 @@ Examples:
 /latest
 ```
 
-## 15. How to update the bot later
+## 16. How to update the bot later
 
 SSH into the VPS and run:
 
@@ -248,15 +260,15 @@ pip install -r requirements.txt
 sudo systemctl restart telegram-scraper-bot
 ```
 
-## 16. Important limitation
+## 17. Important limitation
 
-This bot currently scrapes Google search results in headless Chrome. If Google serves a CAPTCHA or another manual verification page, the background job may fail because there is no interactive browser window on a typical VPS.
+This bot no longer uses a browser to search Google directly. It depends on SerpApi for search results.
 
 That means:
 
-- normal runs can work fine
-- challenge pages can interrupt some jobs
-- this is a scraping reliability issue, not a Telegram issue
+- you avoid the old CAPTCHA and verification-page failures from headless browser search
+- you now depend on SerpApi credits, billing, and result availability
+- if the API key is missing or invalid, jobs will fail immediately
 
 ## Files added for deployment
 

@@ -9,6 +9,7 @@ This repo is now set up so Railway can deploy it directly from GitHub with the i
 2. Send `/start` to your bot in Telegram.
 3. Get your Telegram chat ID.
    An easy way is to message `@userinfobot`, or call the Bot API `getUpdates` endpoint after sending `/start` to your bot.
+4. Create a [SerpApi](https://serpapi.com/) account and copy your API key.
 
 ## Railway Setup
 
@@ -26,9 +27,11 @@ Add these in the Railway service `Variables` tab:
 ```text
 TELEGRAM_BOT_TOKEN=your_new_bot_token
 TELEGRAM_ALLOWED_CHAT_IDS=your_numeric_chat_id
-TELEGRAM_HEADLESS=true
+SERPAPI_API_KEY=your_serpapi_api_key
 TELEGRAM_DEFAULT_MAX_PROFILES=25
-TELEGRAM_CHALLENGE_TIMEOUT=600
+SERPAPI_GOOGLE_DOMAIN=google.com
+SERPAPI_HL=en
+SERPAPI_GL=in
 ```
 
 Optional:
@@ -77,4 +80,10 @@ Push to the connected GitHub branch again and Railway will rebuild and redeploy 
 
 ## Important Limitation
 
-This bot runs headless on Railway. If Google presents a CAPTCHA or manual verification page, that job can fail because there is no visible browser window to solve it.
+This bot no longer scrapes Google directly with a browser. It relies on SerpApi instead, so Railway deployment is much more reliable than the old headless Selenium flow.
+
+Your main operational limits are now:
+
+1. SerpApi usage limits and billing
+2. Search-result quality for a given query
+3. Telegram bot token and chat ID configuration
