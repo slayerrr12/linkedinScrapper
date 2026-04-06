@@ -129,6 +129,7 @@ def parse_bot_config() -> TelegramBotConfig:
 class TelegramScraperBot:
     def __init__(self, config: TelegramBotConfig):
         self.config = config
+        self.started_at = datetime.now(timezone.utc)
         self.active_jobs: dict[int, asyncio.Task] = {}
         self.job_states: dict[int, BotJobState] = {}
         self.latest_success: dict[int, BotJobState] = {}
@@ -157,10 +158,10 @@ class TelegramScraperBot:
             return
         await update.message.reply_text(
             "Commands:\n"
-            "/scrape <query>\n"
-            "/scrape <max_profiles> <query>\n"
-            "/status\n"
-            "/latest"
+            "/scrape <query> - start a scrape with the default max profile count\n"
+            "/scrape <max_profiles> <query> - start a scrape with your chosen limit\n"
+            "/status - show bot health, current job state, and latest completed job\n"
+            "/latest - send the newest exported files for this chat"
         )
 
     async def scrape_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -200,12 +201,7 @@ class TelegramScraperBot:
             return
 
         chat_id = update.effective_chat.id
-        state = self.job_states.get(chat_id)
-        if state is None:
-            await update.message.reply_text("No job has been started in this chat yet.")
-            return
-
-        await update.message.reply_text(self.format_state(state))
+        await update.message.reply_text(self.format_status_message(chat_id))
 
     async def latest_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         if not await self.ensure_authorized(update):
@@ -333,6 +329,52 @@ class TelegramScraperBot:
             lines.append(f"Error: {state.error}")
 
         return "\n".join(lines)
+
+    def format_status_message(self, chat_id: int) -> str:
+        current_state = self.job_states.get(chat_id)
+        latest_state = self.latest_success.get(chat_id)
+
+        lines = [
+            "Bot status: online",
+            f"Uptime: {self.format_duration(datetime.now(timezone.utc) - self.started_at)}",
+            f"Default max profiles: {self.config.default_max_profiles}",
+        ]
+
+        location_bits = [self.config.google_domain, self.config.language]
+        if self.config.country:
+            location_bits.append(self.config.country)
+        lines.append(f"Search config: {', '.join(location_bits)}")
+
+        if current_state is None:
+            lines.append("Current job: idle")
+        else:
+            lines.append("")
+            lines.append("Current job:")
+            lines.append(self.format_state(current_state))
+            if current_state.status in {"queued", "running"}:
+                elapsed = datetime.now(timezone.utc) - current_state.started_at
+                lines.append(f"Elapsed: {self.format_duration(elapsed)}")
+
+        if latest_state is not None and latest_state is not current_state:
+            lines.append("")
+            lines.append("Latest completed job:")
+            lines.append(self.format_state(latest_state))
+
+        return "\n".join(lines)
+
+    @staticmethod
+    def format_duration(duration) -> str:
+        total_seconds = max(int(duration.total_seconds()), 0)
+        hours, remainder = divmod(total_seconds, 3600)
+        minutes, seconds = divmod(remainder, 60)
+
+        parts: list[str] = []
+        if hours:
+            parts.append(f"{hours}h")
+        if minutes or hours:
+            parts.append(f"{minutes}m")
+        parts.append(f"{seconds}s")
+        return " ".join(parts)
 
     async def error_handler(self, update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
         print(f"Telegram bot error: {context.error}")

@@ -31,7 +31,7 @@ Commands:
 - `/help`
 - `/scrape <query>`
 - `/scrape <max_profiles> <query>`
-- `/status`
+- `/status` shows bot health, uptime, current job state, and latest completed job
 - `/latest`
 
 Bot-triggered export files are stored under `bot_runs/`.
